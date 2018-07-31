@@ -1,0 +1,46 @@
+html, body {
+    background:#fff;
+}
+.explorer {
+    width: 100%;
+    font:sans-serif;
+}
+    .explorer .float-right {
+        float:right;
+    }
+    .explorer .icon{
+        display: inline-block;
+        width:2em;
+        margin-right:-.5em;
+        text-align: center;
+    }
+
+    .explorer table{
+        width: 100%;
+    }
+    .explorer td {
+        vertical-align: top;
+    }
+    .explorer th {
+        text-align:left;
+    }
+    .explorer .transaction {
+        padding: 1em;
+        border: 1px rgba(0,0,0,.5) solid;
+        margin: 1em;
+    }
+    .explorer .transactionNumber {
+        display:inline-block;
+        max-width:100px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .explorer .address{
+        cursor: pointer;
+        text-decoration: underline;
+    }
+    .explorer .monospace,
+    .explorer .value {
+        font-family: monospace;
+    }
