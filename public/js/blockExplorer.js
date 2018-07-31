@@ -193,19 +193,12 @@ class BlockExplorer {
 
                     return model;
                 }).then(async model => {  // calculate `to` address stats
-
-                    // TODO: because this has to make a network call if there is a new contract created
-                    // it could be run async and the UI updated when it completes.
-
+                
                     if(!model) return;
 
                     if(model.isContractCreation) {
-                        // get newly created contract's address
-                        model.to = await this.getTransactionReceipt(transactionHash).then(result => result.contractAddress);
                         stats.contractCreation++;
-
-                        // TODO: my hunch is that a contract can be "pending" and not yet have an address? is this check really needed?
-                        if(!model.to) return model;
+                        return model;
                     }
 
                     const cachedTo = (stats.allAddresses[model.to] = stats.allAddresses[model.to] || new Address(model.to));
@@ -221,13 +214,8 @@ class BlockExplorer {
 
                     const row = document.createElement("tr");
                     row.className = "transaction"
-                    row.innerHTML = `
-                        <td class="monospace"><span class="blockNumber">${model.block}</span></td>
-                        <td class="monospace" title='${model.tx}'><span class="transactionNumber">${model.tx}</span></td>
-                        <td class="monospace address from" data-address='${model.from}'>${model.from}</td>
-                        <td class="monospace to" title="${model.to}"><span class=icon>${model.isContractCreation ? "📰" : "·"}</span> <span data-address='${model.to}' class=address>${model.isContractCreation ? "Contract Creation" : model.to}</span></td>
-                        <td class="value">${model.value.toLocaleString()} Ether</div></td>
-                    `;
+
+                    model.render(row);
 
                     this.tbody.appendChild(row);
 
@@ -244,7 +232,7 @@ class BlockExplorer {
                             });
                     }
                     else {
-                        continuation = new Promise((resolve)=> resolve(true));
+                        continuation = new Promise(resolve => resolve(true));
                     }
                     // let's check if this address is a contract or an address and update the UI and stats when we get the
                     // results back
@@ -252,15 +240,17 @@ class BlockExplorer {
                             if(!isContract) return;
 
                             stats.numContractTransactions++;
-
-                            if(model.isContractCreation) return; // we don't need to get logs for contract creations
-
-                            this.updateStats(); // update stats because we are about to go to async land again.
+                            this.updateStats();
 
                             return this.getTransactionReceipt(transactionHash)
                                 .then(result => {
-                                    if(result) {
-                                        stats.events += result.logs.length;
+                                    if(!result) return;
+
+                                    stats.events += result.logs.length;
+                                    if(model.isContractCreation && result.contractAddress) {
+                                        model.to = result.contractAddress;
+                                        stats.uniqueReceivers[model.to] = true;
+                                        model.render(row);
                                     }
                                 });
                         });
@@ -335,7 +325,7 @@ class BlockExplorer {
         for(let i = from; i <= to; i++) {
             let blockCall = this.getBlock(i);
 
-            let transactionsCall = blockCall.then(block => this.processBlockTransactions(block, stats, this.cancellationToken))
+            let transactionsCall = blockCall.then(block => Promise.all(this.processBlockTransactions(block, stats, this.cancellationToken)))
             blockCall.then(block => this.updateBlockStats(block, stats, this.cancellationToken));
 
             blockPromises.push(blockCall);
