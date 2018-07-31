@@ -331,6 +331,7 @@ class BlockExplorer {
         const blockPromises = [];
         const transactionPromises = [];
         this.cancellationToken = new CancellationToken();
+
         for(let i = from; i <= to; i++) {
             let blockCall = this.getBlock(i);
 
@@ -342,10 +343,13 @@ class BlockExplorer {
         }
 
         if(e) {
+            // in the case of a form submitted even, make sure we don't navigate away
+            // it's way down here in the fn because if an error happens above at least we'd get a real form submit out of it
             e.preventDefault();
             window.history.pushState(null, "", "/?from=" + from + "&to=" + to);
         }
 
+        // just some debug stuff:
         const blocksDone = Promise.all(blockPromises).then(() => {
             console.log("finished fetching all blocks");
         });
