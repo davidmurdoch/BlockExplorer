@@ -40,7 +40,7 @@ class BlockExplorer {
 
                 const addressStats = this.stats.allAddresses[address];
                 if(addressStats) {
-                    alert(`${address} \n\nSent: ${addressStats.sent.toLocaleString()}\nReceived: ${addressStats.received.toLocaleString()}\n\nin the selected blocks.`);
+                    alert(`${address} \n\nSent: ${addressStats.sent.toLocaleString()}\nReceived: ${addressStats.received.toLocaleString()}\n\nin the given block range.`);
                 }
             }
         });
