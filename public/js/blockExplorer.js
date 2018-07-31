@@ -304,16 +304,16 @@ class BlockExplorer {
 
         if(from < 0) {
             alert("The `From` block msut be greater than or queal to 0.")
-            e.preventDefault();
+            e && e.preventDefault();
             return;
         }
         if(to < from) {
             alert("The `To` block may not precede the `From` block.")
-            e.preventDefault();
+            e && e.preventDefault();
             return;
         }
         if(totalBlocks > 1000 && !confirm("That's a lot of blocks. I can try to load everything at once. You sure you want to do this?")){
-            e.preventDefault();
+            e && e.preventDefault();
             return;
         }
 
