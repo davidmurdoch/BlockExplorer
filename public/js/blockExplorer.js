@@ -1,17 +1,19 @@
 class BlockExplorer {
-    constructor(rootNode) {
-        if(!Web3.givenProvider){
-            throw new Error("Web3 Provider is required");
-        }
-        if(!rootNode){
-            throw new Error("Provide a rootNode");
+    constructor(web3Provider) {
+        const _provider = web3Provider || Web3.givenProvider
+        if(!_provider){
+            throw new Error("A Web3 Provider is required");
         }
 
-
-        this.web3 = new Web3(Web3.givenProvider);
+        this.web3 = new Web3(_provider);
         this.addressQueue = {};
         this.initStats();
+    }
 
+    render(rootNode) {
+        if(!rootNode){
+            throw new Error("You must provide a rootNode");
+        }
 
         // initialize UI stuff
         this.rootNode = rootNode;
@@ -172,27 +174,23 @@ class BlockExplorer {
 
     processBlockTransactions(block, stats, cancellationToken) {
         const transactions = block.transactions;
+
         return transactions.map((transactionHash) => {
             return this.getTransaction(transactionHash)
                 .then(transaction => {
                     cancellationToken.throwIfCancelled();
 
-                    return transaction ? {
-                        "block": block.number,
-                        "tx": transaction.hash,
-                        "from": transaction.from,
-                        "to": transaction.to,
-                        "value": parseFloat(this.web3.utils.fromWei(transaction.value, "ether"), 10),
-                        "isContractCreation" : transaction.to === null
-                    } : null;
-                }).then(model => { // calculate `from` address stats
+                    return transaction ? new Transaction(transaction, block.number) : null;
+                })
+                .then(model => { // calculate `from` address stats and total ether stats
                     if(!model) return;
 
-                    const cachedFrom = (stats.allAddresses[model.from] = stats.allAddresses[model.from] || {sent:0, received:0});
+                    const cachedFrom = (stats.allAddresses[model.from] = stats.allAddresses[model.from] || new Address(model.from));
                     cachedFrom.sent += model.value;
 
                     stats.uniqueSenders[model.from] = true;
                     stats.totalEtherSent += model.value;
+
                     return model;
                 }).then(async model => {  // calculate `to` address stats
 
@@ -209,9 +207,11 @@ class BlockExplorer {
                         // TODO: my hunch is that a contract can be "pending" and not yet have an address? is this check really needed?
                         if(!model.to) return model;
                     }
-                    stats.uniqueReceivers[model.to] = true;
-                    const cachedTo = (stats.allAddresses[model.to] = stats.allAddresses[model.to] || {sent:0, received:0});
+
+                    const cachedTo = (stats.allAddresses[model.to] = stats.allAddresses[model.to] || new Address(model.to));
                     cachedTo.received += model.value;
+
+                    stats.uniqueReceivers[model.to] = true;
 
                     return model;
                 }).then(model => { // update UI
@@ -233,22 +233,29 @@ class BlockExplorer {
 
                     if(!model.to) return;
 
+                    let continuation;
+                    // don't bother calling getCode is this is a newly created contract
+                    if(!model.isContractCreation) {
+                        continuation = this.getCode(model.to)
+                            .then(result => {
+                                const isContract = result !== "0x";
+                                row.getElementsByClassName("icon")[0].innerHTML = isContract ? "📰" : "🏠";
+                                return isContract;
+                            });
+                    }
+                    else {
+                        continuation = new Promise((resolve)=> resolve(true));
+                    }
                     // let's check if this address is a contract or an address and update the UI and stats when we get the
                     // results back
-                    return this.getCode(model.to)
-                        .then(result => {
-                            return result !== "0x";
-                        }).then(isContract => {
-                            row.getElementsByClassName("icon")[0].innerHTML = isContract ? "📰" : "🏠";
-                            //toEl.innerHTML = (isContract ? "<span title='icon contract'>📰</span> " : "<span title='icon address'></span> ") + toEl.innerHTML;
-                            return isContract;
-                        }).then(isContract => {
+                    return continuation.then(isContract => {
                             if(!isContract) return;
 
                             stats.numContractTransactions++;
-                            this.updateStats();
 
                             if(model.isContractCreation) return; // we don't need to get logs for contract creations
+
+                            this.updateStats(); // update stats because we are about to go to async land again.
 
                             return this.getTransactionReceipt(transactionHash)
                                 .then(result => {
@@ -257,13 +264,13 @@ class BlockExplorer {
                                     }
                                 });
                         });
-                }).then(() => {
+                }).then(() => { // we're done getting all the transaction stuff we want
                     stats.doneTransactions++;
                     this.updateStats();
                 }).catch((e) => {                   
-                    // we dont need to process errors produced by the CancellationToken
+                    // we dont need to process errors produced by the CancellationToken because that's what they're for
                     if(typeof e === CancellationToken.CancellationError) {
-                        throw e;
+                        throw e; // meh
                     }
                 });
         });
@@ -272,7 +279,6 @@ class BlockExplorer {
     // updating the eth price here doesn't make much sense
     pollEthPrice(){
         this.getEthUSDPrice().then((price) => {
-            console.log(price);
             this.ethPrice = price;
             this.updateStats();
         }).catch(e => {
@@ -284,6 +290,7 @@ class BlockExplorer {
     }
 
     getEthUSDPrice() {
+        // todo: put a debouncer here so we don't ever accidentally call this too often/sec
         return fetch("https://api.coinmarketcap.com/v1/ticker/ethereum/")
             .then(response => response.json())
             .then(json => json[0].price_usd);
@@ -293,6 +300,7 @@ class BlockExplorer {
         const from = parseInt(this.form.querySelector("[name=from]").value, 10);
         const to = parseInt(this.form.querySelector("[name=to]").value, 10);
         const totalBlocks = to - from + 1
+
 
         if(from < 0) {
             alert("The `From` block msut be greater than or queal to 0.")
@@ -304,31 +312,33 @@ class BlockExplorer {
             e.preventDefault();
             return;
         }
-        if(totalBlocks > 1000) {
-            if(!confirm("That's a lot of blocks. I can try to load everything at once. You sure you want to do this?")){
-                e.preventDefault();
-                return;
-            }
+        if(totalBlocks > 1000 && !confirm("That's a lot of blocks. I can try to load everything at once. You sure you want to do this?")){
+            e.preventDefault();
+            return;
         }
+
 
         // reset:
         this.cancellationToken && this.cancellationToken.cancel();
-
         this.tbody.innerHTML = "";
         this.initStats();
+
 
         const stats = this.stats;
         stats.totalBlocks = totalBlocks;
 
+
         const blockPromises = [];
+        const transactionPromises = [];
         this.cancellationToken = new CancellationToken();
         for(let i = from; i <= to; i++) {
-            let call = this.getBlock(i);
+            let blockCall = this.getBlock(i);
 
-            call.then(block => this.processBlockTransactions(block, stats, this.cancellationToken))
-            call.then(block => this.updateBlockStats(block, stats, this.cancellationToken));
+            let transactionsCall = blockCall.then(block => this.processBlockTransactions(block, stats, this.cancellationToken))
+            blockCall.then(block => this.updateBlockStats(block, stats, this.cancellationToken));
 
-            blockPromises.push(call);
+            blockPromises.push(blockCall);
+            transactionPromises.push(transactionsCall);
         }
 
         if(e) {
@@ -336,8 +346,16 @@ class BlockExplorer {
             window.history.pushState(null, "", "/?from=" + from + "&to=" + to);
         }
 
-        return Promise.all(blockPromises).then(() => {
+        const blocksDone = Promise.all(blockPromises).then(() => {
             console.log("finished fetching all blocks");
+        });
+
+        const transactionsDone = Promise.all(transactionPromises).then(() => {
+            console.log("finished fetching all transactions");
+        });
+
+        return Promise.all([blocksDone, transactionsDone]).then(() => {
+            console.log("all done");
         });
     }
 
