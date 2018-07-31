@@ -19,7 +19,7 @@ class BlockExplorer {
         this.rootNode = rootNode;
         rootNode.className = "explorer";
         rootNode.innerHTML = `
-            <form><div><label>From:<input min="0" type="number" placeholder="From Block" name="from"></label> <label>To:<input type="number" placeholder="To Block" name="to"> inclusive. </label><button type="submit">Explore</button> <div class="float-right"><a href='/'>load latest</a></div></div></form>
+            <form><div><label>From:<input min="0" type="number" placeholder="From Block" name="from"></label> <label>To:<input type="number" placeholder="To Block" name="to"> inclusive. </label><button type="submit">Explore</button> <div class="float-right"><a href='/'>load latest block</a></div></div></form>
             <hr>
             <table class="stats"><tbody><tr><td><center>Loading...</center></td></tr></tbody></table>
             <hr>
