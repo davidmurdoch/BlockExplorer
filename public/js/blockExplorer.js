@@ -376,12 +376,6 @@ class BlockExplorer {
         });
     }
 
-    getLatestBlock(){
-        return this.getLatestBlockNumber().then(result => {
-            return this.getBlock(result);
-        });
-    }
-
     getBlock(blockId){
         return new Promise((resolve, reject) => {
             this.web3.eth.getBlock(blockId, (error, result) => {
