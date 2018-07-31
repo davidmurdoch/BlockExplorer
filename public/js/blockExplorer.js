@@ -126,7 +126,7 @@ class BlockExplorer {
         const contractTransactions = stats.totalTransactions > 0 ? (Math.round(stats.numContractTransactions/stats.totalTransactions*100).toLocaleString() + "%") : "n/a";
         this.statsTbody.innerHTML = `
             <td>Processed:<br><strong>${stats.doneBlocks.toLocaleString()}/${stats.totalBlocks.toLocaleString()}</strong> blocks<br><strong>${stats.doneTransactions.toLocaleString()}/${stats.totalTransactions.toLocaleString()}</strong> transactions</td>
-            <td>Ether Transferred:<br><strong>${stats.totalEtherSent.toLocaleString()}</strong><br/><strong>${this.ethPrice?(this.ethPrice*stats.totalEtherSent).toLocaleString():0}</strong></td>
+            <td>Value Transferred:<br><strong>Ξ${stats.totalEtherSent.toLocaleString()} ETH</strong><br/><strong>${this.ethPrice?(this.ethPrice*stats.totalEtherSent).toLocaleString(undefined, {style:"currency", currency:"USD", currencyDisplay: "symbol"}):0} USD</strong></td>
             <td>Senders:<br><strong>${Object.keys(stats.uniqueSenders).length.toLocaleString()}</strong></td>
             <td>Receivers:<br><strong>${Object.keys(stats.uniqueReceivers).length.toLocaleString()}</strong></td>
             <td>Uncles:<br><strong>${stats.uncles}</strong></td>
