@@ -296,7 +296,7 @@ class BlockExplorer {
             .then(json => json[0].price_usd);
     }
 
-    async update(e) {
+    update(e) {
         const from = parseInt(this.form.querySelector("[name=from]").value, 10);
         const to = parseInt(this.form.querySelector("[name=to]").value, 10);
         const totalBlocks = to - from + 1
