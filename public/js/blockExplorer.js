@@ -249,6 +249,10 @@ class BlockExplorer {
                                     if(model.isContractCreation && result.contractAddress) {
                                         // update the contract icon since we have
                                         model.to = result.contractAddress;
+
+                                        const cachedTo = (stats.allAddresses[model.to] = stats.allAddresses[model.to] || new Address(model.to));
+                                        cachedTo.received += model.value; // i'm pretty sure model.value will always be 0 here. :-/
+                                        
                                         stats.uniqueReceivers[model.to] = true;
                                         model.render(row);
                                     }
