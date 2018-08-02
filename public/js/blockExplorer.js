@@ -219,10 +219,8 @@ class BlockExplorer {
 
                     this.tbody.appendChild(row);
 
-                    if(!model.to) return;
-
                     let continuation;
-                    // don't bother calling getCode is this is a newly created contract
+                    // don't bother calling getCode if this is a newly created contract because we already know it's a contract, not an address
                     if(!model.isContractCreation) {
                         continuation = this.getCode(model.to)
                             .then(result => {
@@ -234,9 +232,10 @@ class BlockExplorer {
                     else {
                         continuation = new Promise(resolve => resolve(true));
                     }
-                    // let's check if this address is a contract or an address and update the UI and stats when we get the
-                    // results back
+                    
                     return continuation.then(isContract => {
+                            // if we are a contract we need to get the transaction receipt to count logs and potentially
+                            // get the contractAddress, too.
                             if(!isContract) return;
 
                             stats.numContractTransactions++;
@@ -248,6 +247,7 @@ class BlockExplorer {
 
                                     stats.events += result.logs.length;
                                     if(model.isContractCreation && result.contractAddress) {
+                                        // update the contract icon since we have
                                         model.to = result.contractAddress;
                                         stats.uniqueReceivers[model.to] = true;
                                         model.render(row);
