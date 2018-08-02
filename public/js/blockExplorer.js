@@ -336,7 +336,7 @@ class BlockExplorer {
             // in the case of a form submitted even, make sure we don't navigate away
             // it's way down here in the fn because if an error happens above at least we'd get a real form submit out of it
             e.preventDefault();
-            window.history.pushState(null, "", "/?from=" + from + "&to=" + to);
+            window.history.pushState(null, "", "./?from=" + from + "&to=" + to);
         }
 
         // just some debug stuff:
